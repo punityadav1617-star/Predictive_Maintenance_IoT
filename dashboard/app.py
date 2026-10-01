@@ -6,6 +6,77 @@ import pandas as pd
 
 DB_NAME = "machine_data.db"
 MODEL_PATH = "models/machine_fault_model.pkl"
+import random
+from datetime import datetime, timedelta
+
+
+def initialize_database():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sensor_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            temperature REAL,
+            vibration REAL,
+            current REAL,
+            rpm REAL,
+            status TEXT
+        )
+    """)
+
+    cursor.execute("SELECT COUNT(*) FROM sensor_data")
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        start_time = datetime.now()
+
+        for i in range(50):
+            temperature = random.gauss(35, 2)
+            vibration = random.gauss(0.25, 0.05)
+            current = random.gauss(0.8, 0.08)
+            rpm = random.gauss(1450, 30)
+
+            fault_probability = random.random()
+
+            if fault_probability < 0.10:
+                temperature += random.uniform(10, 20)
+                vibration += random.uniform(0.6, 1.2)
+                current += random.uniform(0.4, 0.8)
+                rpm -= random.uniform(150, 300)
+                status = "FAULT"
+
+            elif fault_probability < 0.20:
+                temperature += random.uniform(4, 10)
+                vibration += random.uniform(0.2, 0.5)
+                current += random.uniform(0.1, 0.3)
+                rpm -= random.uniform(50, 150)
+                status = "WARNING"
+
+            else:
+                status = "NORMAL"
+
+            timestamp = start_time + timedelta(seconds=i)
+
+            cursor.execute("""
+                INSERT INTO sensor_data
+                (timestamp, temperature, vibration, current, rpm, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                timestamp.isoformat(),
+                round(temperature, 2),
+                round(vibration, 3),
+                round(current, 2),
+                round(rpm, 2),
+                status
+            ))
+
+    conn.commit()
+    conn.close()
+
+
+initialize_database()
 
 st.set_page_config(
     page_title="Predictive Maintenance Dashboard",
